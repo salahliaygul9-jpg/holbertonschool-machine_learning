@@ -1,7 +1,7 @@
 # Probability
 
 
-## � Learning Objectives
+## Learning Objectives
 
 ---
 
@@ -23,12 +23,12 @@ At the end of this project, you are expected to be able to explain to anyone, wi
 
 ---
 
-## ➗ Mathematical Approximations
+## Mathematical Approximations
 
 ---
 
 For the following tasks, you will have to use various irrational numbers and functions. Since you are not able to import any libraries, please use the following approximations:
 
-- π = 3.1415926536
+- $\pi$  = 3.1415926536
 - e = 2.7182818285
 - $f(x) = \frac{2}{\sqrt{\pi}}\left(x - \frac{x^3}{3} + \frac{x^5}{10} - \frac{x^7}{42} + \frac{x^9}{216}\right)$
