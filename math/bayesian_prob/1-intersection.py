@@ -2,22 +2,8 @@
 """1-intersection.py"""
 import numpy as np
 
-
-def likelihood(x, n, P):
-    """Calculates the likelihood of obtaining the data x and n."""
-    if x == 0 or x == n:
-        comb = 1
-    else:
-        num = np.prod(np.arange(n, n-x, -1), dtype=object)
-        den = np.prod(np.arange(1, x+1), dtype=object)
-        comb = num // den
-
-    likelihoods = comb * (P ** x) * ((1 - P) ** (n - x))
-    return likelihoods.astype(float)
-
-
 def intersection(x, n, P, Pr):
-    """Calculates the intersection of obtaining data with prior probabilities."""
+    """Calculates the intersection of data with prior probabilities."""
     if not isinstance(n, int) or n <= 0:
         raise ValueError("n must be a positive integer")
     if not isinstance(x, int) or x < 0:
@@ -37,6 +23,13 @@ def intersection(x, n, P, Pr):
     if not np.isclose(np.sum(Pr), 1):
         raise ValueError("Pr must sum to 1")
 
-    likelihoods = likelihood(x, n, P)
-    posterior = likelihoods * Pr
+
+    if x == 0 or x == n:
+        comb = 1
+    else:
+        num = np.prod(np.arange(n, n - x, -1), dtype=object)
+        den = np.prod(np.arange(1, x + 1), dtype=object)
+        comb = num // den
+
+    posterior = comb * (P ** x) * ((1 - P) ** (n - x)) * Pr
     return posterior
