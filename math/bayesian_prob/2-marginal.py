@@ -8,7 +8,9 @@ def marginal(x, n, P, Pr):
     if not isinstance(n, int) or n <= 0:
         raise ValueError("n must be a positive integer")
     if not isinstance(x, int) or x < 0:
-        raise ValueError("x must be an integer that is greater than or equal to 0")
+        raise ValueError(
+            "x must be an integer that is greater than or equal to 0"
+        )
     if x > n:
         raise ValueError("x cannot be greater than n")
     if not isinstance(P, np.ndarray) or P.ndim != 1:
@@ -22,7 +24,7 @@ def marginal(x, n, P, Pr):
     if not np.isclose(np.sum(Pr), 1):
         raise ValueError("Pr must sum to 1")
 
-    # binomial coefficient
+    # Binomial coefficient
     if x == 0 or x == n:
         comb = 1
     else:
@@ -30,8 +32,8 @@ def marginal(x, n, P, Pr):
         den = np.prod(np.arange(1, x + 1), dtype=object)
         comb = num // den
 
-    # likelihood
+    # Likelihood for each probability
     likelihoods = comb * (P ** x) * ((1 - P) ** (n - x))
 
-    # marginal probability = sum(likelihood * prior)
+    # Marginal probability = sum of likelihood * prior
     return np.sum(likelihoods * Pr)
