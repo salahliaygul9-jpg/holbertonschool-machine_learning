@@ -2,6 +2,7 @@
 """1-intersection.py"""
 import numpy as np
 
+
 def intersection(x, n, P, Pr):
     """Calculates the intersection of data with prior probabilities."""
     if not isinstance(n, int) or n <= 0:
@@ -32,4 +33,4 @@ def intersection(x, n, P, Pr):
         comb = num // den
 
     posterior = comb * (P ** x) * ((1 - P) ** (n - x)) * Pr
-    return posterior
+    return np.array(posterior, dtype=float)
