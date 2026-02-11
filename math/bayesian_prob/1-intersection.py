@@ -23,8 +23,6 @@ def intersection(x, n, P, Pr):
         raise ValueError("All values in Pr must be in the range [0, 1]")
     if not np.isclose(np.sum(Pr), 1):
         raise ValueError("Pr must sum to 1")
-
-
     if x == 0 or x == n:
         comb = 1
     else:
