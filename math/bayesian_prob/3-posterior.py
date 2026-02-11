@@ -26,7 +26,7 @@ def likelihood(x, n, P):
             np.arange(1, x + 1), dtype=object
         )
 
-    return comb * (P ** x) * ((1 - P) ** (n - x))
+    return np.array(comb * (P ** x) * ((1 - P) ** (n - x)), dtype=float)
 
 
 def intersection(x, n, P, Pr):
@@ -58,7 +58,7 @@ def intersection(x, n, P, Pr):
 def marginal(x, n, P, Pr):
     """Calculates the marginal probability of obtaining x."""
     inter = intersection(x, n, P, Pr)
-    return np.sum(inter)
+    return float(np.sum(inter))
 
 
 def posterior(x, n, P, Pr):
