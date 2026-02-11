@@ -4,7 +4,7 @@ import numpy as np
 
 
 def likelihood(x, n, P):
-    """Calculates likelihood of x given n and P (binomial)."""
+    """Calculates the likelihood of obtaining the data x and n."""
     if x == 0 or x == n:
         comb = 1
     else:
