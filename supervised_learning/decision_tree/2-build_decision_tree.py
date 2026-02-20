@@ -74,12 +74,11 @@ class Node():
 
     def __str__(self):
         """String representation"""
-        feature = f"[feature={self.feature}"
-        threshold = f"threshold={self.threshold}]"
+        feature = f"[feature={self.feature}, threshold={self.threshold}]"
         if self.is_root:
-            result = f"root {feature}, {threshold}]"
+            result = f"root {feature}"
         else:
-            result = f"-> node {feature}, {threshold}"
+            result = f"-> node {feature}"
 
         if self.is_leaf:
             return f"-> leaf [value={self.value}]"
