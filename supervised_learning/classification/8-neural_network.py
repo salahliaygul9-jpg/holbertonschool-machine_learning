@@ -1,31 +1,45 @@
 #!/usr/bin/env python3
-"""Making neural network"""
-
-
+"""
+Module that defines a neural network with one hidden layer
+performing binary classification
+"""
 import numpy as np
 
 
 class NeuralNetwork:
-    """making Neural network"""
+    """
+    Class that defines a neural network with one hidden layer
+    performing binary classification
+    """
+
     def __init__(self, nx, nodes):
-        """Initialize neural network"""
-        if type(nx) != int:
+        """
+        Initialize the neural network
+
+        Args:
+            nx (int): Number of input features
+            nodes (int): Number of nodes in the hidden layer
+
+        Raises:
+            TypeError: If nx or nodes is not an integer
+            ValueError: If nx or nodes is less than 1
+        """
+        # Validate nx
+        if not isinstance(nx, int):
             raise TypeError("nx must be an integer")
         if nx < 1:
             raise ValueError("nx must be a positive integer")
-        if type(nodes) != int:
+
+        # Validate nodes
+        if not isinstance(nodes, int):
             raise TypeError("nodes must be an integer")
         if nodes < 1:
             raise ValueError("nodes must be a positive integer")
-        """The weights vector for the hidden layer"""
+
+        # Initialize weights, biases and activations
         self.W1 = np.random.normal(size=(nodes, nx))
-        """The bias for the hidden layer"""
-        self.b1 = np.zeros(nodes).reshape(nodes, 1)
-        """The activated output for the hidden layer"""
+        self.b1 = np.zeros((nodes, 1))
         self.A1 = 0
-        """The weights vector for the output neuron"""
         self.W2 = np.random.normal(size=(1, nodes))
-        """The bias for the output neuron"""
         self.b2 = 0
-        """The activated output for the output neuron (prediction)"""
         self.A2 = 0
