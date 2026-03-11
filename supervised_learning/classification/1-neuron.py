@@ -1,32 +1,35 @@
 #!/usr/bin/env python3
-""" neuron class"""
+"""Neuron"""
+
 import numpy as np
 
 
 class Neuron:
-    """ creating neuron class"""
+    """This class defines a single neuron performing
+    binary classifiaction"""
 
     def __init__(self, nx):
-        """ initialize Neuron class"""
-        if type(nx) != int:
+        """Initializes the neuron with nx inputs"""
+        if type(nx) is not int:
             raise TypeError("nx must be an integer")
         if nx < 1:
             raise ValueError("nx must be a positive integer")
-        self.__W = np.random.normal(size=(1, nx))
+        self.nx = nx
+        self.__W = np.random.randn(1, nx)
         self.__b = 0
         self.__A = 0
 
     @property
     def W(self):
-        """ return private w"""
+        """Getter for W"""
         return self.__W
 
     @property
     def b(self):
-        """ return private b"""
+        """Getter for b"""
         return self.__b
 
     @property
     def A(self):
-        """ return private a"""
+        """Getter for A"""
         return self.__A
