@@ -1,62 +1,48 @@
 #!/usr/bin/env python3
-"""Mini batch"""
+"""
+Creates mini-batches for training a neural network with mini-batch
+gradient descent.
+"""
 
-
-import tensorflow as tf
+import numpy as np
 shuffle_data = __import__('2-shuffle_data').shuffle_data
 
 
-def train_mini_batch(
-        X_train,
-        Y_train,
-        X_valid,
-        Y_valid,
-        batch_size=32,
-        epochs=5,
-        load_path="/tmp/model.ckpt",
-        save_path="/tmp/model.ckpt"):
+def create_mini_batches(X, Y, batch_size):
     """
-    Train the mini batch
+    Creates mini-batches to be used for training a neural network using
+    mini-batch gradient descent.
+
+    Args:
+        X: numpy.ndarray of shape (m, nx) representing input data
+           m: number of data points
+           nx: number of features in X
+        Y: numpy.ndarray of shape (m, ny) representing the labels
+           m: same number of data points as in X
+           ny: number of classes for classification tasks.
+        batch_size: number of data points in a batch
+
+    Returns:
+        List of mini-batches containing tuples (X_batch, Y_batch).
     """
-    with tf.Session() as sess:
-        storer = tf.train.import_meta_graph(load_path + ".meta")
-        storer.restore(sess, load_path)
+    m = X.shape[0]
+    mini_batches = []
+    
+    shuffled_X, shuffled_Y = shuffle_data(X, Y)
 
-        x = tf.get_collection('x')[0]
-        y = tf.get_collection('y')[0]
-        accuracy = tf.get_collection('accuracy')[0]
-        loss = tf.get_collection('loss')[0]
-        train_op = tf.get_collection('train_op')[0]
+    num_complete_batches = m // batch_size
 
-        mini_batches = X_train.shape[0] // batch_size
+    for i in range(num_complete_batches)
+        start = i * batch_size
+        end = start + batch_size
+        mini_batch_X = shuffled_X[start:end]
+        mini_batch_Y = shuffled_Y[start:end]
+        mini_batches.append((mini_batch_X, mini_batch_Y))
 
-        for i in range(epochs + 1):
-            shuffle_data(X_train, Y_train)
-            print("After {} epochs:".format(i))
-            cost_train = sess.run(loss, feed_dict={x: X_train, y: Y_train})
-            print("\tTraining Cost: {}".format(cost_train))
-            acc_train = sess.run(accuracy, feed_dict={
-                                 x: X_train, y: Y_train})
-            print("\tTraining Accuracy: {}".format(acc_train))
-            cost_valid = sess.run(loss, feed_dict={x: X_valid, y: Y_valid})
-            print("\tValidation Cost: {}".format(cost_valid))
-            acc_valid = sess.run(accuracy, feed_dict={
-                                 x: X_valid, y: Y_valid})
-            print("\tValidation Accuracy: {}".format(acc_valid))
+   if m % batch_size != 0:
+       start = num_complete_batches * batch_size
+       mini_batch_X = shuffled_X[start:]
+       mini_batch_Y = shuffled_Y[start:]
+       mini_batches.append((mini_batch_X, mini_batch_Y))
 
-            for j in range(mini_batches + 1):
-                beg = j * batch_size
-                end = (j + 1) * batch_size
-                sess.run(train_op, feed_dict={
-                         x: X_train[beg:end], y: Y_train[beg:end]})
-
-                if j % 100 == 0 and j != 0 and i != epochs:
-                    print('\tStep {}:'.format(j))
-                    steps = sess.run(loss, feed_dict={
-                        x: X_train[beg:end], y: Y_train[beg:end]})
-                    print('\t\tCost: {}'.format(steps))
-                    acc_steps = sess.run(accuracy, feed_dict={
-                        x: X_train[beg:end], y: Y_train[beg:end]})
-                    print('\t\tAccuracy: {}'.format(acc_steps))
-
-        return storer.save(sess, save_path)
+  return mini_batches
