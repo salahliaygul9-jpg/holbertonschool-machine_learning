@@ -1,16 +1,26 @@
 #!/usr/bin/env python3
-""" RMSProp training op """
+"""
+RMSProp ugraded
+"""
+
+
 import tensorflow as tf
 
 
 def create_RMSProp_op(loss, alpha, beta2, epsilon):
-    """ Creates the training operation for a neural network using RMSProp
-            optimization
-        loss is the loss of the network
-        alpha is the learning rate
-        beta2 is the RMSProp weight
-        epsilon is a small number to avoid division by zero
-        Returns: the RMSProp optimization operation
     """
-    optimizer = tf.train.RMSPropOptimizer(alpha, decay=beta2, epsilon=epsilon)
-    return optimizer.apply_gradients(optimizer.compute_gradients(loss))
+    Function that creates the training operation for a NN in tensorflow
+    using the RMSProp optimization algorithm
+    Arguments:
+     - loss is the loss of the network
+     - alpha is the learning rate
+     - beta2 is the RMSProp weight
+     - epsilon is a small number to avoid division by zero
+    Returns:
+     The RMSProp optimization operation
+    """
+
+    optimizer = tf.train.RMSPropOptimizer(alpha, epsilon=epsilon, decay=beta2)
+    train = optimizer.minimize(loss)
+
+    return train
