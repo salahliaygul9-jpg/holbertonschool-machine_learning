@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
-
-import matplotlib.pyplot as plt
+""" convolutions"""
 import numpy as np
-pool = __import__('6-pool').pool
 
 
-if __name__ == '__main__':
-
-    dataset = np.load('../../supervised_learning/data/animals_1.npz')
-    images = dataset['data']
-    print(images.shape)
-    images_pool = pool(images, (2, 2), (2, 2), mode='avg')
-    print(images_pool.shape)
-
-    plt.imshow(images[0])
-    plt.show()
-    plt.imshow(images_pool[0] / 255)
-    plt.show()
+def pool(images, kernel_shape, stride, mode='max'):
+    """ pooling"""
+    m, hm, wm, cm = images.shape
+    kh, kw = kernel_shape
+    sh, sw = stride
+    ch = int((hm - kh) / sh) + 1
+    cw = int((wm - kw) / sw) + 1
+    convoluted = np.zeros((m, ch, cw, cm))
+    for h in range(ch):
+        for w in range(cw):
+            square = images[:, h * sh: h * sh + kh, w * sw: w * sw + kw, :]
+            if mode == 'max':
+                insert = np.max(square, axis=(1, 2))
+            else:
+                insert = np.average(square, axis=(1, 2))
+            convoluted[:, h, w, :] = insert
+    return convoluted
