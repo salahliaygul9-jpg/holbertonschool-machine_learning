@@ -1,37 +1,39 @@
 #!/usr/bin/env python3
+""" Script that perfoms a valid convolution"""
+
+
 import numpy as np
 
 
 def convolve_grayscale_valid(images, kernel):
     """
-    Performs a valid convolution on grayscale images.
-
+    Function to perform a valid grayscale convolution
     Args:
-        images (numpy.ndarray): Input images of shape (m, h, w)
-                                m: number of images
-                                h: height of each image
-                                w: width of each image
-        kernel (numpy.ndarray): Kernel of shape (kh, kw)
+        images: numpy.ndarray with shape (m, h, w)
+                containing multiple grayscale images
+                m: the number of images
+                h: height in pixels of the images
+                w: width in pixels of the images
+        kernel: numpy.ndarray with shape (kh, kw) containing
+                the kernel for the convolution
+                kn: the height of the kernel
+                kw: the width of the kernel
+    Returns: numpy.ndarray containing the convolved images
 
-    Returns:
-        numpy.ndarray: Convolved images of shape (m, h - kh + 1, w - kw + 1)
     """
-    m, h, w = images.shape
-    kh, kw = kernel.shape
+    m = images.shape[0]
+    h = images.shape[1]
+    w = images.shape[2]
+    kh = kernel.shape[0]
+    kw = kernel.shape[1]
+    output_h = h - kh + 1
+    output_w = w - kw + 1
 
-    # Calculate output dimensions (valid convolution)
-    oh = h - kh + 1
-    ow = w - kw + 1
+    conv_out = np.zeros((m, output_h, output_w))
 
-    # Initialize the output array
-    convolved = np.zeros((m, oh, ow))
-
-    # Only two outer for loops (as required by the task)
-    for i in range(m):
-        for y in range(oh):
-            for x in range(ow):
-                # Element-wise multiplication + sum (very fast in numpy)
-                region = images[i, y:y + kh, x:x + kw]
-                convolved[i, y, x] = np.sum(region * kernel)
-
-    return convolved
+    image = np.arange(m)
+    for x in range(output_h):
+        for y in range(output_w):
+            conv_out[image, x, y] = (np.sum(images[image, x:kh+x,
+                                            y:kw+y] * kernel, axis=(1, 2)))
+    return conv_out
