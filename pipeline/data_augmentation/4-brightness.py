@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 """
-Contrast
+Brightness
 """
 import tensorflow as tf
 
 
-def change_contrast(image, lower, upper):
+def change_brightness(image, max_delta):
     """
-    Randomly adjusts the contrast of an image
+    Randomly changes the brightness of an image
     Args:
-        image:3D tf.Tensor representing the input image to adjust the contrast
-        lower: A float representing the lower bound of the random contrast.
-        upper: A float representing the upper bound of the random contrast.
+        image is a 3D tf.Tensor containing the image to change
+        max_delta is the maximum amount the image should be brightened
     Returns:
-        the contrast-adjusted image.
+        the altered image
     """
-    return tf.image.random_contrast(image, lower=lower, upper=upper)
+    return tf.image.random_brightness(image, max_delta=max_delta)
