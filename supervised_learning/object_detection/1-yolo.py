@@ -1,117 +1,103 @@
 #!/usr/bin/env python3
+"""
+Process Outputs
+"""
 
-"""Process Outputs"""
-
-import tensorflow as tf
-import os
+from tensorflow import keras as K
 import numpy as np
-
-
-def sigmoid(x):
-    """
-    Sigmoid function
-    :param x: The x parameter
-    :return: The computed function given x
-    """
-    return 1 / (1 + np.exp(-x))
-
-
-def get_classes_name(classes_name_path):
-    """
-    Get the classes name form a given .txt. file
-    :param classes_name_path: The path to the .txt file
-    :return: And array that contain class name
-    """
-    classes_name = []
-    with open(classes_name_path, "r") as f:
-        for line in f.readlines():
-            classes_name.append(line.strip())
-
-    return classes_name
 
 
 class Yolo:
     """
-    Yolo model class
+    This class implements the Yolo v3 algorithm to perform object detection.
     """
-    def __init__(
-            self,
-            model_path,
-            classes_name_path,
-            class_t,
-            nms_t,
-            anchors
-    ):
-        """
-        Init the class
-        :param model_path: The path to the DarkNet model
-        :param classes_name_path: The path to the file cotaining classes names
-        :param class_t: The box threshold for the initial filtrering step
-        :param nms_t: The IOU threshold for non-max suppression
-        :param anchors: The anchor boxes
-        """
-        if not os.path.exists(model_path):
-            raise FileNotFoundError("Wrong model file path")
 
-        if not os.path.exists(classes_name_path):
-            raise FileNotFoundError("Wrong classes file path")
+    def __init__(self, model_path, classes_path, class_t, nms_t, anchors):
+        """
+        Initializes the Yolo class.
 
-        self.model = tf.keras.models.load_model(model_path)
-        self.class_names = get_classes_name(classes_name_path)
+        Args:
+            model_path (str): path to the YOLO model.
+            classes_path (str): path to the file containing the class names.
+            class_t (float): box score threshold for the initial filtering
+                step.
+            nms_t (float): The IOU threshold for non-max suppression.
+            anchors (numpy.ndarray): The anchor boxes.
+        """
+        self.model = K.models.load_model(model_path)
+        with open(classes_path, 'r') as file:
+            self.class_names = [line.strip() for line in file]
         self.class_t = class_t
         self.nms_t = nms_t
         self.anchors = anchors
 
+    def sigmoid(self, x):
+        """A simple sigmoid method"""
+        return 1 / (1 + np.exp(-x))
+
     def process_outputs(self, outputs, image_size):
         """
-        Process the outputs of the Darknet YOLO model to get all the
-        boundary boxes for each output, and each cell of output, and
-        each anchor boxes
-        :param outputs: The output of the YOLO model
-        :param image_size: The original image size
-        :return: A processed output
+        Processes outputs from the YOLO model and returns the bounding boxes,
+        box confidences, and class probabilities for each detected object.
+
+        Parameters:
+        - outputs: a list of numpy.ndarrays containing predictions from YOLO
+        - image_size: a numpy.ndarray containing the original size of the
+            image [image_height, image_width]
+
+        Returns:
+        - boxes: a list of numpy.ndarrays containing the processed boundary
+            boxes for each output
+        - box_confidences: a list of numpy.ndarrays containing the box
+            confidences for each output
+        - box_class_probs: a list of numpy.ndarrays containing the class
+            probabilities for each output
         """
         image_height, image_width = image_size
         boxes = []
         box_confidences = []
         box_class_probs = []
 
-        for output_idx, output in enumerate(outputs):
-            grid_height, grid_width, anchor_boxes, _ = output.shape
-            t_x = output[:, :, :, 0]
-            t_y = output[:, :, :, 1]
-            t_w = output[:, :, :, 2]
-            t_h = output[:, :, :, 3]
+        for i, output in enumerate(outputs):
+            grid_height, grid_width = output.shape[:2]
 
-            c_x = np.arange(grid_width)
-            c_x = np.tile(c_x, grid_height)
-            c_x = c_x.reshape(grid_height, grid_width, 1)
+            # Extract box parameters (output coordinates)
+            t_x = output[..., 0]
+            t_y = output[..., 1]
+            t_w = output[..., 2]
+            t_h = output[..., 3]
 
-            c_y = np.arange(grid_height)
-            c_y = np.tile(c_y, grid_width)
-            c_y = c_y.reshape(1, grid_height, grid_width).T
+            # grid cells coordinates for width and height
+            c_x, c_y = np.meshgrid(np.arange(grid_width),
+                                   np.arange(grid_height))
 
-            bx = (sigmoid(t_x) + c_x) / grid_width
-            by = (sigmoid(t_y) + c_y) / grid_height
-            bw = np.exp(t_w) * self.anchors[output_idx, :, 0]
-            bw /= self.model.input.shape[1].value
-            bh = np.exp(t_h) * self.anchors[output_idx, :, 1]
-            bh /= self.model.input.shape[2].value
+            # Add axis to match dimensions of t_x & t_y
+            c_x = np.expand_dims(c_x, axis=-1)
+            c_y = np.expand_dims(c_y, axis=-1)
 
-            y1 = (by - bh / 2) * image_height
+            # Calculate bounding box coordinates
+            # NOTE apply sigmoid activation and offset by grid cell location
+            # then normalize by grid dimensions
+            bx = (self.sigmoid(t_x) + c_x) / grid_width
+            by = (self.sigmoid(t_y) + c_y) / grid_height
+            # NOTE apply exponential and scale by anchor dimensions
+            bw = (np.exp(t_w) * self.anchors[i,
+                  :, 0]) / self.model.input.shape[1]
+            bh = (np.exp(t_h) * self.anchors[i,
+                  :, 1]) / self.model.input.shape[2]
+
+            # Convert to original image scale
             x1 = (bx - bw / 2) * image_width
-            x2 = (bw / 2 + bx) * image_width
-            y2 = (bh / 2 + by) * image_height
+            y1 = (by - bh / 2) * image_height
+            x2 = (bx + bw / 2) * image_width
+            y2 = (by + bh / 2) * image_height
 
-            b_size = np.zeros((grid_height, grid_width, anchor_boxes, 4))
-            b_size[:, :, :, 0] = x1
-            b_size[:, :, :, 1] = y1
-            b_size[:, :, :, 2] = x2
-            b_size[:, :, :, 3] = y2
-            boxes.append(b_size)
+            # Stack coordinates to form final box coordinates
+            boxes.append(np.stack([x1, y1, x2, y2], axis=-1))
 
-            box_confidences.append(sigmoid(output[:, :, :, 4:5]))
-
-            box_class_probs.append(sigmoid(output[:, :, :, 5:]))
+            # Extract sigmoid-normalized box confidence and class prob.
+            # NOTE 4:5 instead of 4 to preserve last dimension
+            box_confidences.append(self.sigmoid(output[..., 4:5]))
+            box_class_probs.append(self.sigmoid(output[..., 5:]))
 
         return boxes, box_confidences, box_class_probs
