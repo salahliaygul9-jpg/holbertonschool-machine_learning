@@ -22,9 +22,6 @@ class BayesianOptimization:
         xsi=0.01,
         minimize=True
     ):
-        """
-        Class constructor
-        """
         self.f = f
 
         self.gp = GP(
@@ -44,10 +41,6 @@ class BayesianOptimization:
         self.minimize = minimize
 
     def acquisition(self):
-        """
-        Calculates the next best sample location
-        using Expected Improvement
-        """
         mu, sigma = self.gp.predict(self.X_s)
 
         if self.minimize:
@@ -64,10 +57,11 @@ class BayesianOptimization:
 
         EI = np.zeros_like(mu)
         EI[nonzero] = (
-            imp[nonzero] * norm.cdf(Z[nonzero])
-            + sigma[nonzero] * norm.pdf(Z[nonzero])
+            imp[nonzero] * norm.cdf(Z[nonzero]) +
+            sigma[nonzero] * norm.pdf(Z[nonzero])
         )
 
         X_next = self.X_s[np.argmax(EI)]
 
         return X_next, EI
+
