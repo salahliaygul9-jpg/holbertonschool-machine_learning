@@ -1,76 +1,72 @@
 #!/usr/bin/env python3
 """
-Variational autoencoder.
+3-variational.py
 """
-
 import tensorflow.keras as keras
-import tensorflow.keras.backend as K
+K = keras
 
 
 def autoencoder(input_dims, hidden_layers, latent_dims):
-    """
-    Creates a variational autoencoder.
-    """
+    """function that instantiates a VAE instance"""
 
-    # =================
-    # Encoder
-    # =================
-    encoder_input = keras.Input(shape=(input_dims,))
-    x = encoder_input
+    # Define the encoder model
+    encoder_inputs = K.Input(shape=(input_dims,))
+    # inputs = K.Input(shape=input_dims)
+    for i in range(len(hidden_layers)):
+        layer = K.layers.Dense(units=hidden_layers[i], activation='relu')
+        if i == 0:
+            outputs = layer(encoder_inputs)
+        else:
+            outputs = layer(outputs)
+    # Reparameterization trick
+    layer = K.layers.Dense(units=latent_dims)
+    mean = layer(outputs)
+    layer = K.layers.Dense(units=latent_dims)
+    logvar = layer(outputs)
 
-    for h in hidden_layers:
-        x = keras.layers.Dense(h, activation='relu')(x)
+    def sample(alist):
+        """sample z"""
+        mean, logvar = alist
+        eps = K.backend.random_normal(shape=K.backend.shape(mean))
+        z = mean + K.backend.exp(0.5 * logvar) * eps
+        return z
 
-    z_mean = keras.layers.Dense(latent_dims)(x)
-    z_log_var = keras.layers.Dense(latent_dims)(x)
+    z = K.layers.Lambda(sample, output_shape=(latent_dims,))([mean, logvar])
+    encoder = K.models.Model(inputs=encoder_inputs, outputs=[z, mean, logvar])
 
-    def sample(args):
-        mean, log_var = args
-        eps = K.random_normal(shape=(K.shape(mean)[0], latent_dims))
-        return mean + K.exp(log_var / 2) * eps
+    # Define the decoder model
+    decoder_inputs = K.Input(shape=(latent_dims,))
+    for i in range(len(hidden_layers) - 1, -1, -1):
+        layer = K.layers.Dense(units=hidden_layers[i], activation='relu')
+        if i == len(hidden_layers) - 1:
+            outputs = layer(decoder_inputs)
+        else:
+            outputs = layer(outputs)
+    layer = K.layers.Dense(units=input_dims, activation='sigmoid')
+    outputs = layer(outputs)
+    decoder = K.models.Model(inputs=decoder_inputs, outputs=outputs)
 
-    z = keras.layers.Lambda(sample)([z_mean, z_log_var])
+    # Define the autoencoder
+    outputs = encoder(encoder_inputs)
+    outputs = decoder(outputs)
+    auto = K.models.Model(inputs=encoder_inputs, outputs=outputs)
 
-    encoder = keras.Model(
-        encoder_input,
-        [z, z_mean, z_log_var]
-    )
+    # Print the model summaries
+    # encoder.summary()
+    # decoder.summary()
+    # auto.summary()
 
-    # =================
-    # Decoder
-    # =================
-    decoder_input = keras.Input(shape=(latent_dims,))
-    x = decoder_input
+    def compute_loss(inputs, outputs):
+        """cost function"""
+        loss = K.backend.binary_crossentropy(inputs, outputs)
+        loss = K.backend.sum(loss, axis=1)
+        KL_divergence = -0.5 * K.backend.sum(1 + logvar
+                                             - K.backend.square(mean)
+                                             - K.backend.exp(logvar),
+                                             axis=-1)
+        return loss + KL_divergence
 
-    for h in reversed(hidden_layers):
-        x = keras.layers.Dense(h, activation='relu')(x)
-
-    decoder_output = keras.layers.Dense(
-        input_dims,
-        activation='sigmoid'
-    )(x)
-
-    decoder = keras.Model(decoder_input, decoder_output)
-
-    # =================
-    # Autoencoder
-    # =================
-    z_out, mean_out, log_out = encoder(encoder_input)
-    output = decoder(z_out)
-
-    auto = keras.Model(encoder_input, output)
-
-    # KL loss
-    kl = -0.5 * K.sum(
-        1 + log_out - K.square(mean_out) - K.exp(log_out),
-        axis=-1
-    )
-
-    auto.add_loss(K.mean(kl))
-
-    auto.compile(
-        optimizer='adam',
-        loss='binary_crossentropy'
-    )
+    # Compile the autoencoder
+    auto.compile(optimizer='Adam', loss=compute_loss)
 
     return encoder, decoder, auto
