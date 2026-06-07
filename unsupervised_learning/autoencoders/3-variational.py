@@ -10,21 +10,13 @@ import tensorflow.keras.backend as K
 def autoencoder(input_dims, hidden_layers, latent_dims):
     """
     Creates a variational autoencoder.
-
-    Args:
-        input_dims (int): input size
-        hidden_layers (list): encoder hidden layers
-        latent_dims (int): latent dimension
-
-    Returns:
-        encoder, decoder, auto
     """
 
-    # =====================
+    # =================
     # Encoder
-    # =====================
-    inputs = keras.Input(shape=(input_dims,))
-    x = inputs
+    # =================
+    encoder_input = keras.Input(shape=(input_dims,))
+    x = encoder_input
 
     for h in hidden_layers:
         x = keras.layers.Dense(h, activation='relu')(x)
@@ -32,35 +24,41 @@ def autoencoder(input_dims, hidden_layers, latent_dims):
     z_mean = keras.layers.Dense(latent_dims)(x)
     z_log_var = keras.layers.Dense(latent_dims)(x)
 
-    def sampling(args):
-        z_mean, z_log_var = args
-        epsilon = K.random_normal(shape=(K.shape(z_mean)[0], latent_dims))
-        return z_mean + K.exp(z_log_var / 2) * epsilon
+    def sample(args):
+        mean, log_var = args
+        eps = K.random_normal(shape=(K.shape(mean)[0], latent_dims))
+        return mean + K.exp(log_var / 2) * eps
 
-    z = keras.layers.Lambda(sampling)([z_mean, z_log_var])
+    z = keras.layers.Lambda(sample)([z_mean, z_log_var])
 
-    encoder = keras.Model(inputs, [z, z_mean, z_log_var])
+    encoder = keras.Model(
+        encoder_input,
+        [z, z_mean, z_log_var]
+    )
 
-    # =====================
+    # =================
     # Decoder
-    # =====================
-    latent_inputs = keras.Input(shape=(latent_dims,))
-    x = latent_inputs
+    # =================
+    decoder_input = keras.Input(shape=(latent_dims,))
+    x = decoder_input
 
     for h in reversed(hidden_layers):
         x = keras.layers.Dense(h, activation='relu')(x)
 
-    outputs = keras.layers.Dense(input_dims, activation='sigmoid')(x)
+    decoder_output = keras.layers.Dense(
+        input_dims,
+        activation='sigmoid'
+    )(x)
 
-    decoder = keras.Model(latent_inputs, outputs)
+    decoder = keras.Model(decoder_input, decoder_output)
 
-    # =====================
+    # =================
     # Autoencoder
-    # =====================
-    z_out, mean_out, log_out = encoder(inputs)
-    recon = decoder(z_out)
+    # =================
+    z_out, mean_out, log_out = encoder(encoder_input)
+    output = decoder(z_out)
 
-    auto = keras.Model(inputs, recon)
+    auto = keras.Model(encoder_input, output)
 
     # KL loss
     kl = -0.5 * K.sum(
