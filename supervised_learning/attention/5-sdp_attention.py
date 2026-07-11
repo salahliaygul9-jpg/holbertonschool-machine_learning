@@ -1,18 +1,39 @@
 #!/usr/bin/env python3
-"""Positional encoding task"""
+"""Scaled Dot-Product Attention"""
+
+import tensorflow as tf
 
 
-import numpy as np
+def sdp_attention(Q, K, V, mask=None):
+    """
+    Calculates the scaled dot-product attention.
 
+    Args:
+        Q: query tensor (..., seq_len_q, dk)
+        K: key tensor (..., seq_len_v, dk)
+        V: value tensor (..., seq_len_v, dv)
+        mask: optional mask broadcastable to
+              (..., seq_len_q, seq_len_v)
 
-def positional_encoding(max_seq_len, dm):
-    """Calculates the positionaal encoding for a transformer"""
-    pos_embeddings = np.zeros((max_seq_len, dm))
+    Returns:
+        output: (..., seq_len_q, dv)
+        weights: (..., seq_len_q, seq_len_v)
+    """
+    # QK^T
+    matmul_qk = tf.matmul(Q, K, transpose_b=True)
 
-    for i in range(max_seq_len):
-        for j in range(0, dm, 2):
-            power = np.exp(j * -np.log(10000.0) / dm)
-            pos_embeddings[i, j] = (np.sin(i * power))
-            pos_embeddings[i, j + 1] = (np.cos(i * power))
+    # Scale by sqrt(dk)
+    dk = tf.cast(tf.shape(K)[-1], tf.float32)
+    scaled_logits = matmul_qk / tf.math.sqrt(dk)
 
-    return pos_embeddings
+    # Apply mask if provided
+    if mask is not None:
+        scaled_logits += (mask * -1e9)
+
+    # Softmax to obtain attention weights
+    weights = tf.nn.softmax(scaled_logits, axis=-1)
+
+    # Weighted sum of values
+    output = tf.matmul(weights, V)
+
+    return output, weights
