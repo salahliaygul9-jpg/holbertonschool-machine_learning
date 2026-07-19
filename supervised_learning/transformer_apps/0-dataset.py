@@ -1,43 +1,85 @@
 #!/usr/bin/env python3
-"""
-Dataset class for Portuguese-English translation
-"""
-
+"""This class includes the class Dataset that
+loads and prepares a dataset for machine translation"""
+import tensorflow_datasets as tfds
 import transformers
-from setup import load_pt2en
 
 
 class Dataset:
-    """Loads and prepares the translation dataset."""
-
+    """
+    Dataset class for machine translation (Portuguese to English)
+    Loads the TED HRLR translation dataset and creates tokenizers
+    """
     def __init__(self):
-        """Class constructor."""
-
-        self.data_train = load_pt2en('train')
-        self.data_valid = load_pt2en('validation')
-
-        self.tokenizer_pt, self.tokenizer_en = (
-            self.tokenize_dataset(self.data_train)
+        """
+        Args:
+            data_train, which contains the ted_hrlr_translate/
+             pt_to_en tf.data.Dataset train split, loaded as_supervised
+            data_valid, which contains the ted_hrlr_translate/
+             pt_to_en tf.data.Dataset validate split, loaded as_supervised
+            tokenizer_pt is the Portuguese tokenizer created from the training set
+            tokenizer_en is the English tokenizer created from the training set
+        """
+        # as_supervised=True returns (input, label) tuples
+        examples, metadata = tfds.load(
+            'ted_hrlr_translate/pt_to_en',
+            with_info=True,
+            split=['train', 'validation'],
+            as_supervised=True
+        )
+        self.data_train = examples[0]
+        self.data_valid = examples[1]
+        self.tokenizer_pt, self.tokenizer_en = self.tokenize_dataset(
+            self.data_train
         )
 
     def tokenize_dataset(self, data):
-        """
-        Creates tokenizers for the dataset.
-
+        """Creates sub-word tokenizers for our dataset
         Args:
-            data: tf.data.Dataset of (pt, en) sentence pairs.
-
+            data is a tf.data.Dataset whose examples
+             are formatted as a tuple (pt, en)
+            pt is the tf.Tensor containing the Portuguese sentence
+            en is the tf.Tensor containing the
+             corresponding English sentence
+            Use a pre-trained tokenizer:
+            use the pretrained model neuralmind/
+             bert-base-portuguese-cased for the portuguese text
+            use the pretrained model bert-base-uncased for the english text
+            Train the tokenizers with a maximum vocabulary size of 2**13
         Returns:
-            tokenizer_pt: Portuguese tokenizer.
-            tokenizer_en: English tokenizer.
+            tokenizer_pt, tokenizer_en
+            tokenizer_pt is the Portuguese tokenizer
+            tokenizer_en is the English tokenizer
         """
-
-        tokenizer_pt = transformers.BertTokenizerFast.from_pretrained(
-            "neuralmind/bert-base-portuguese-cased"
+        tokenizer_pt = transformers.AutoTokenizer.from_pretrained(
+            'neuralmind/bert-base-portuguese-cased',
+            use_fast=True,
+            clean_up_tokenization_spaces=True
         )
-
-        tokenizer_en = transformers.BertTokenizerFast.from_pretrained(
-            "bert-base-uncased"
+        tokenizer_en = transformers.AutoTokenizer.from_pretrained(
+            'bert-base-uncased',
+            use_fast=True,
+            clean_up_tokenization_spaces=True
         )
+        pt_sentences = []
+        en_sentences = []
 
-        return tokenizer_pt, tokenizer_en
+        # Extract sentences from the dataset
+        # Decode byte strings to UTF-8 text
+        for pt, en in data:
+            pt_sentences.append(pt.numpy().decode('utf-8'))
+            en_sentences.append(en.numpy().decode('utf-8'))
+        vocab_size = 2 ** 13
+
+        tokenizer_pt = tokenizer_pt.train_new_from_iterator(
+            pt_sentences,
+            vocab_size=vocab_size
+        )
+        tokenizer_en = tokenizer_en.train_new_from_iterator(
+            en_sentences,
+            vocab_size=vocab_size
+        )
+        self.tokenizer_pt = tokenizer_pt
+        self.tokenizer_en = tokenizer_en
+
+        return self.tokenizer_pt, self.tokenizer_en
