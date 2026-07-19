@@ -1,38 +1,42 @@
 #!/usr/bin/env python3
-""" loads and preps a dataset for machine translation
 """
-import tensorflow.compat.v2 as tf
-import tensorflow_datasets as tfds
+Dataset class for Portuguese-English translation
+"""
+
+from setup import load_pt2en
+from transformers import BertTokenizerFast
 
 
 class Dataset:
-    """
-    Loads and preps a dataset
-    """
+    """Loads and prepares the translation dataset"""
 
     def __init__(self):
-        """
-        Class constructor
-        """
-        self.data_train, self.data_valid = tfds.load(
-            'ted_hrlr_translate/pt_to_en',
-            split=['train', 'validation'],
-            as_supervised=True
-        )
-        self.tokenizer_pt, self.tokenizer_en = self.tokenize_dataset(
-            self.data_train
+        """Class constructor"""
+
+        self.data_train = load_pt2en('train')
+        self.data_valid = load_pt2en('validation')
+
+        self.tokenizer_pt, self.tokenizer_en = (
+            self.tokenize_dataset(self.data_train)
         )
 
     def tokenize_dataset(self, data):
         """
-        Creates sub-word tokenizers for our dataset
-            tokenizer_pt is the Portuguese tokenizer
-            tokenizer_en is the English tokenizer
-        """
-        tokenizer_pt = tfds.features.text.SubwordTextEncoder.build_from_corpus(
-            (pt.numpy() for pt, en in data), target_vocab_size=2 ** 15)
+        Creates tokenizers for the dataset
 
-        tokenizer_en = tfds.features.text.SubwordTextEncoder.build_from_corpus(
-            (en.numpy() for pt, en in data), target_vocab_size=2 ** 15)
+        Args:
+            data: tf.data.Dataset of (pt, en) sentence pairs
+
+        Returns:
+            tokenizer_pt, tokenizer_en
+        """
+
+        tokenizer_pt = BertTokenizerFast.from_pretrained(
+            "neuralmind/bert-base-portuguese-cased"
+        )
+
+        tokenizer_en = BertTokenizerFast.from_pretrained(
+            "bert-base-uncased"
+        )
 
         return tokenizer_pt, tokenizer_en
