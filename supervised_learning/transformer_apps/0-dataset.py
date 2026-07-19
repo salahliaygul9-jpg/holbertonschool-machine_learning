@@ -3,15 +3,15 @@
 Dataset class for Portuguese-English translation
 """
 
+import transformers
 from setup import load_pt2en
-from transformers import BertTokenizerFast
 
 
 class Dataset:
-    """Loads and prepares the translation dataset"""
+    """Loads and prepares the translation dataset."""
 
     def __init__(self):
-        """Class constructor"""
+        """Class constructor."""
 
         self.data_train = load_pt2en('train')
         self.data_valid = load_pt2en('validation')
@@ -22,20 +22,21 @@ class Dataset:
 
     def tokenize_dataset(self, data):
         """
-        Creates tokenizers for the dataset
+        Creates tokenizers for the dataset.
 
         Args:
-            data: tf.data.Dataset of (pt, en) sentence pairs
+            data: tf.data.Dataset of (pt, en) sentence pairs.
 
         Returns:
-            tokenizer_pt, tokenizer_en
+            tokenizer_pt: Portuguese tokenizer.
+            tokenizer_en: English tokenizer.
         """
 
-        tokenizer_pt = BertTokenizerFast.from_pretrained(
+        tokenizer_pt = transformers.BertTokenizerFast.from_pretrained(
             "neuralmind/bert-base-portuguese-cased"
         )
 
-        tokenizer_en = BertTokenizerFast.from_pretrained(
+        tokenizer_en = transformers.BertTokenizerFast.from_pretrained(
             "bert-base-uncased"
         )
 
