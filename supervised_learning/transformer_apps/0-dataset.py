@@ -25,7 +25,7 @@ class Dataset:
 
     def tokenize_dataset(self, data):
         """
-        Create Portuguese and English subword tokenizers.
+        Creates Portuguese and English tokenizers.
 
         Args:
             data: tf.data.Dataset containing (pt, en) pairs.
@@ -34,30 +34,14 @@ class Dataset:
             tokenizer_pt: Portuguese tokenizer.
             tokenizer_en: English tokenizer.
         """
-        base_pt = transformers.BertTokenizerFast.from_pretrained(
+        del data
+
+        tokenizer_pt = transformers.BertTokenizerFast.from_pretrained(
             "neuralmind/bert-base-portuguese-cased"
         )
 
-        base_en = transformers.BertTokenizerFast.from_pretrained(
+        tokenizer_en = transformers.BertTokenizerFast.from_pretrained(
             "bert-base-uncased"
-        )
-
-        def pt_iterator():
-            for pt, _ in data:
-                yield pt.numpy().decode("utf-8")
-
-        def en_iterator():
-            for _, en in data:
-                yield en.numpy().decode("utf-8")
-
-        tokenizer_pt = base_pt.train_new_from_iterator(
-            pt_iterator(),
-            vocab_size=2 ** 13
-        )
-
-        tokenizer_en = base_en.train_new_from_iterator(
-            en_iterator(),
-            vocab_size=2 ** 13
         )
 
         return tokenizer_pt, tokenizer_en
