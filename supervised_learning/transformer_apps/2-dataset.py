@@ -1,87 +1,122 @@
 #!/usr/bin/env python3
-"""Module for the class Dataset"""
+"""
+Dataset class for loading, tokenizing, and encoding the
+Portuguese-English translation dataset.
+"""
 
-import tensorflow.compat.v2 as tf
-import tensorflow_datasets as tfds
+import tensorflow as tf
+import transformers
+from setup import load_pt2en
 
 
-class Dataset():
-    """Loads and preps a dataset for machine translation.
-    """
+class Dataset:
+    """Dataset wrapper used for machine translation."""
+
     def __init__(self):
-        """Class constructor.
-        """
+        """Initialize datasets, tokenizers, and encoded datasets."""
+        self.data_train = load_pt2en(split="train")
+        self.data_valid = load_pt2en(split="validation")
 
-        self.data_train = tfds.load('ted_hrlr_translate/pt_to_en',
-                                    split='train',
-                                    as_supervised=True)
+        self.tokenizer_pt, self.tokenizer_en = self.tokenize_dataset(
+            self.data_train
+        )
 
-        self.data_valid = tfds.load('ted_hrlr_translate/pt_to_en',
-                                    split='validation',
-                                    as_supervised=True)
-
-        tokenizer_pt, tokenizer_en = self.tokenize_dataset(self.data_train)
-        self.tokenizer_pt = tokenizer_pt
-        self.tokenizer_en = tokenizer_en
-        self.data_train = self.data_train.map(self.tf_encode)
-        self.data_valid = self.data_valid.map(self.tf_encode)
+        self.data_train = self.data_train.map(
+            lambda pt, en: self.tf_encode(pt, en)
+        )
+        self.data_valid = self.data_valid.map(
+            lambda pt, en: self.tf_encode(pt, en)
+        )
 
     def tokenize_dataset(self, data):
-        """Creates sub-word tokenizers for our dataset.
-
-        Args.
-            data: tf.data.Dataset whose examples are formatted as a tuple
-                (pt, en).
-
-        Returns.
-            The Portuguese tokenizer and the English tokenizer.
         """
+        Train Portuguese and English tokenizers.
 
-        bfc = tfds.deprecated.text.SubwordTextEncoder.build_from_corpus
-        tokenizer_pt = bfc((pt.numpy() for pt, en in data),
-                           target_vocab_size=2**15)
+        Args:
+            data: TensorFlow dataset.
 
-        tokenizer_en = bfc((en.numpy() for pt, en in data),
-                           target_vocab_size=2**15)
+        Returns:
+            tuple containing both trained tokenizers.
+        """
+        pt_tokenizer = transformers.AutoTokenizer.from_pretrained(
+            "neuralmind/bert-base-portuguese-cased"
+        )
+        en_tokenizer = transformers.AutoTokenizer.from_pretrained(
+            "bert-base-uncased"
+        )
+
+        def get_portuguese():
+            """Yield Portuguese sentences."""
+            for pt, _ in data.batch(1000).as_numpy_iterator():
+                yield [text.decode("utf-8") for text in pt]
+
+        def get_english():
+            """Yield English sentences."""
+            for _, en in data.batch(1000).as_numpy_iterator():
+                yield [text.decode("utf-8") for text in en]
+
+        vocab = 2 ** 13
+
+        tokenizer_pt = pt_tokenizer.train_new_from_iterator(
+            get_portuguese(),
+            vocab
+        )
+        tokenizer_en = en_tokenizer.train_new_from_iterator(
+            get_english(),
+            vocab
+        )
 
         return tokenizer_pt, tokenizer_en
 
     def encode(self, pt, en):
-        """Encodes a translation into tokens.
-
-        Args.
-            pt: tf.Tensor containing the Portuguese sentence.
-            en: tf.Tensor containing the corresponding English sentence.
-
-        Returns.
-            An np.ndarray containing the Portuguese tokens and an np.ndarray
-            containing the English tokens
         """
-        v_size = self.tokenizer_pt.vocab_size
-        pt_tokens = [v_size] + self.tokenizer_pt.encode(
-            pt.numpy()) + [v_size + 1]
-        v_size = self.tokenizer_en.vocab_size
-        en_tokens = [v_size] + self.tokenizer_en.encode(
-            en.numpy()) + [v_size + 1]
+        Encode Portuguese and English sentences.
 
-        return pt_tokens, en_tokens
+        Args:
+            pt: Portuguese sentence tensor.
+            en: English sentence tensor.
+
+        Returns:
+            Tuple containing encoded Portuguese and English sequences.
+        """
+        start = self.tokenizer_pt.vocab_size
+        end = start + 1
+
+        pt_sentence = pt.numpy().decode("utf-8")
+        en_sentence = en.numpy().decode("utf-8")
+
+        pt_tokens = self.tokenizer_pt.encode(
+            pt_sentence,
+            add_special_tokens=False
+        )
+        en_tokens = self.tokenizer_en.encode(
+            en_sentence,
+            add_special_tokens=False
+        )
+
+        pt_result = [start] + pt_tokens + [end]
+        en_result = [start] + en_tokens + [end]
+
+        return pt_result, en_result
 
     def tf_encode(self, pt, en):
-        """Acts as a tensorflow wrapper for the encode instance method.
-
-        Args.
-            pt: tf.Tensor containing the Portuguese sentence.
-            en: tf.Tensor containing the corresponding English sentence.
-
-        Returns.
-            A a tf.tensor op for the pt tf.tensor and en tf.tensor
         """
+        TensorFlow wrapper around encode().
 
-        pt_op, en_op = tf.py_function(func=self.encode,
-                                      inp=[pt, en],
-                                      Tout=[tf.int64, tf.int64])
+        Args:
+            pt: Portuguese sentence tensor.
+            en: English sentence tensor.
 
-        pt_op.set_shape([None])
-        en_op.set_shape([None])
+        Returns:
+            Encoded Portuguese and English tensors.
+        """
+        pt_tensor, en_tensor = tf.py_function(
+            self.encode,
+            [pt, en],
+            [tf.int64, tf.int64]
+        )
 
-        return pt_op, en_op
+        pt_tensor.set_shape([None])
+        en_tensor.set_shape([None])
+
+        return pt_tensor, en_tensor
